@@ -402,6 +402,7 @@ int32_t clearFlushedRowBuff(SStreamFileState* pFileState, SStreamSnapshot* pFlus
       }
     }
   }
+  qDebug("clear flushed row buff. %d rows to disk. is all:%d", listNEles(pFlushList), all);
 
 _end:
   if (code != TSDB_CODE_SUCCESS) {
@@ -511,9 +512,12 @@ int32_t clearRowBuff(SStreamFileState* pFileState) {
   if (pFileState->deleteMark != INT64_MAX) {
     clearExpiredRowBuff(pFileState, pFileState->maxTs - pFileState->deleteMark, false);
   }
-  if (isListEmpty(pFileState->freeBuffs)) {
-    return flushRowBuff(pFileState);
-  }
+  do {
+    int32_t code = flushRowBuff(pFileState);
+    if (code != TSDB_CODE_SUCCESS) {
+      return code;
+    }
+  } while (isListEmpty(pFileState->freeBuffs) && pFileState->curRowCount == pFileState->maxRowCount);
   return TSDB_CODE_SUCCESS;
 }
 
